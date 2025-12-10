@@ -21,27 +21,30 @@ jobs:
         run: |
           [ -n "${{ secrets.DOCKER_USERNAME }}" ] || { echo "Missing DOCKER_USERNAME"; exit 1; }
           [ -n "${{ secrets.DOCKER_PASSWORD }}" ] || { echo "Missing DOCKER_PASSWORD"; exit 1; }
-          [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ] || { echo "Missing RENDER_DEPLOY_HOOK"; exit 1; }
+          [ -n "${{ secrets.RENDER_API_KEY }}" ] || { echo "Missing RENDER_API_KEY"; exit 1; }
+          [ -n "${{ secrets.RENDER_SERVICE_ID }}" ] || { echo "Missing RENDER_SERVICE_ID"; exit 1; }
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}  
-          password: ${{ secrets.DOCKER_PASSWORD }}  
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image with tags
         run: |
-          docker build -t felix850l/ansible-docker-lab:latest \
-                       -t felix850l/ansible-docker-lab:${{ env.SHA_SHORT }} \
-                       -t felix850l/ansible-docker-lab:${{ env.DATE }} .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/ansible-docker-lab:latest \
+                       -t ${{ secrets.DOCKER_USERNAME }}/ansible-docker-lab:${{ env.SHA_SHORT }} \
+                       -t ${{ secrets.DOCKER_USERNAME }}/ansible-docker-lab:${{ env.DATE }} .
 
       - name: Push Docker images
         run: |
-          docker push felix850l/ansible-docker-lab:latest
-          docker push felix850l/ansible-docker-lab:${{ env.SHA_SHORT }}
-          docker push felix850l/ansible-docker-lab:${{ env.DATE }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/ansible-docker-lab:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/ansible-docker-lab:${{ env.SHA_SHORT }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/ansible-docker-lab:${{ env.DATE }}
 
-      - name: Trigger Render deploy (deploy hook)
+      - name: Trigger Render deploy via API
         run: |
-          curl -sS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" \
-            -o /dev/null -w "HTTP_STATUS:%{http_code}\n"
+          curl -X POST \
+            https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json"
